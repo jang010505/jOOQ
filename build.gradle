@@ -1,0 +1,90 @@
+plugins {
+	id 'java'
+	id 'org.springframework.boot' version '3.3.3'
+	id 'io.spring.dependency-management' version '1.1.6'
+	id 'nu.studer.jooq' version '7.1.1'
+}
+
+group = 'com.seminar'
+version = '0.0.1-SNAPSHOT'
+
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(17)
+	}
+}
+
+configurations {
+	compileOnly {
+		extendsFrom annotationProcessor
+	}
+}
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+	compileOnly 'org.projectlombok:lombok'
+	runtimeOnly 'com.mysql:mysql-connector-j'
+	annotationProcessor 'org.projectlombok:lombok'
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+
+	// jOOQ Starter
+	implementation 'org.springframework.boot:spring-boot-starter-jooq'
+	jooqGenerator 'com.mysql:mysql-connector-j'
+
+	// queryDSL
+	implementation 'com.querydsl:querydsl-jpa:5.1.0:jakarta'
+	implementation 'com.querydsl:querydsl-sql:5.1.0'
+	annotationProcessor "com.querydsl:querydsl-apt:5.1.0:jakarta"
+	annotationProcessor "jakarta.annotation:jakarta.annotation-api"
+	annotationProcessor "jakarta.persistence:jakarta.persistence-api"
+}
+
+tasks.named('test') {
+	useJUnitPlatform()
+}
+
+jooq {
+	version = dependencyManagement.importedProperties['jooq.version'] // use jOOQ version defined in Spring Boot
+	configurations {
+		main {
+			generateSchemaSourceOnCompilation = true // default (can be omitted)
+			generationTool {
+				logging = org.jooq.meta.jaxb.Logging.DEBUG
+				jdbc {
+					driver = 'com.mysql.cj.jdbc.Driver'
+					url = 'jdbc:mysql://localhost:3306/querydslsql?allowMultiQueries=true'
+					user = 'root'
+					password = 'root1234'
+				}
+				generator {
+					name = 'org.jooq.codegen.DefaultGenerator'
+					database {
+						// jooq codegenerator 패키지의 디비 클래스
+						name = 'org.jooq.meta.mysql.MySQLDatabase'
+						inputSchema = 'querydslsql'
+						includes = '.*'
+					}
+					generate {
+						deprecated = false
+						records = true
+//						immutablePojos = true
+//						fluentSetters = true
+//						javaTimeTypes = true
+					}
+					target {
+						packageName = 'com.seminar.querydslsql'
+						directory = 'build/generated-src/jooq'
+					}
+					strategy.name = "org.jooq.codegen.DefaultGeneratorStrategy"
+				}
+			}
+		}
+	}
+}
